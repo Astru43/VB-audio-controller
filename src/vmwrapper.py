@@ -121,6 +121,10 @@ class VoicemeeterWrapper:
             if self._lock.locked():
                 self._lock.release()
 
+    def set_channel(self, channel: Union['Bus', 'Strip']):
+        self.channel = channel
+        self.getParameterFloat(self._gain, self.ref_volume)
+
     class Strip(Enum):
         STRIP0 = b'Strip[0]'
         STRIP1 = b'Strip[1]'

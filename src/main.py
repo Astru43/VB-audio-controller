@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import sys
@@ -6,6 +7,7 @@ from pynput import keyboard
 from pynput.keyboard import Key
 from win32 import win32gui
 from win32.lib import win32con
+from menu_builder import menu_builder
 from trayIcon import TrayIcon
 from vmwrapper import VoicemeeterWrapper
 
@@ -49,8 +51,10 @@ def hide():
 
 
 def stop():
-    listener.stop()
-    icon.stop()
+    if 'icon' in globals():
+        icon.stop()
+    if 'listener' in globals():
+        listener.stop()
 
 
 def res_path(res: str) -> str:
@@ -61,10 +65,47 @@ def res_path(res: str) -> str:
     return path
 
 
+def load_channel(config):
+    if config:
+        ret = VoicemeeterWrapper.Bus.BUS4
+        channel: str = config['channel']
+        match channel[0:-1]:
+            case 'BUS':
+                ret = VoicemeeterWrapper.Bus[channel]
+            case 'STRIP':
+                ret = VoicemeeterWrapper.Strip[channel]
+    else:
+        ret = VoicemeeterWrapper.Bus.BUS4
+    return ret
+
+
+def load_config():
+    try:
+        config = None
+        path = Path('config.json')
+        if path.exists():
+            with open(path) as file:
+                config = json.load(file)
+    finally:
+        return config
+
+
+def save_config(config):
+    try:
+        with open(Path('config.json'), 'w') as file:
+            json.dump(config, file)
+    except:
+        os.remove(Path('config.json'))
+
+
 if __name__ == '__main__':
     try:
-        vm = VoicemeeterWrapper(VoicemeeterWrapper.Bus.BUS4)
-        icon = TrayIcon("VMR", stop=stop, icon=res_path('res/icon_vb_mod.png'))
+        config = load_config()
+        channel = load_channel(config)
+        vm = VoicemeeterWrapper(channel)
+        menu = menu_builder(vm, stop)
+        icon = TrayIcon("VMR", title='Cunt Muffin', menu=menu,
+                        icon=res_path('res/icon_vb_mod.png'))
 
         vm.login()
         with volume_listener(vm.volume_up, vm.volume_down) as listener:
@@ -74,3 +115,4 @@ if __name__ == '__main__':
     finally:
         stop()
         vm.logout()
+        save_config({'channel': vm.channel.name})
