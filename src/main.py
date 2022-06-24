@@ -44,8 +44,8 @@ def volume_listener(volume_up: Callable[[int], None] = _none, volume_down: Calla
 
 def hide():
     wnd = win32gui.GetForegroundWindow()
-    wnd_title = win32gui.GetWindowText(wnd)
-    if os.path.basename(wnd_title) == "main.exe":
+    cmd: str = os.path.basename(sys.argv[0])
+    if cmd.endswith('.exe') and not cmd.startswith('debug_'):
         win32gui.ShowWindow(wnd, win32con.SW_HIDE)
 
 
