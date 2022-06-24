@@ -1,37 +1,26 @@
 from enum import Enum
 from os import path
 import sys
-from threading import Lock, Thread, Timer
+from threading import Lock, Thread
 from time import sleep
-from typing import Union
+from typing import Type, Union
 import winreg
 import ctypes
-from ctypes import c_char_p, c_float, byref, POINTER
+from ctypes import c_char_p, c_float, byref, POINTER, pointer
 
 
 class VoicemeeterWrapper:
     _self_update = False
     _quit = False
     _lock = Lock()
-    connected = False
-    volume = c_float()
-    ref_volume = byref(volume)
+    _connected = False
+    _volume = c_float()
+    _ref_volume = byref(_volume)
 
     def __init__(self, channel: Union['Bus', 'Strip']) -> None:
-        self.channel = channel.value
-        if sys.maxsize > 2**32:
-            self.voicemeeterDll = 'VoicemeeterRemote64.dll'
-        else:
-            self.voicemeeterDll = 'VoicemeeterRemote.dll'
-        regPath = r'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\VB:Voicemeeter {17359A74-1236-5467}'
+        self.channel = channel
         try:
-            handle = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, regPath)
-            self.voicemeeterPath = path.dirname(
-                winreg.QueryValueEx(handle, 'UninstallString')[0]
-            )
-            self.lib = ctypes.CDLL(
-                path.join(self.voicemeeterPath, self.voicemeeterDll)
-            )
+            self._load_lib()
         except OSError as err:
             print('Failed to get VoicemeeterRemote.dll')
             raise err
@@ -50,27 +39,41 @@ class VoicemeeterWrapper:
                         self._lock.acquire()
                         if self._quit:
                             return
-                        elif self.connected:
+                        elif self._connected:
                             if self._isParametersDirty() > 0:
                                 if self._self_update:
                                     self._self_update = False
                                     continue
                                 self.getParameterFloat(
-                                    self.channel + b'.Gain',
-                                    self.ref_volume
+                                    self._gain, self._ref_volume
                                 )
                     finally:
                         if self._lock.locked():
                             self._lock.release()
+
             self.updater = Thread(target=update)
+
+    def _load_lib(self):
+        if sys.maxsize > 2**32:
+            self.voicemeeterDll = 'VoicemeeterRemote64.dll'
+        else:
+            self.voicemeeterDll = 'VoicemeeterRemote.dll'
+        regPath = r'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\VB:Voicemeeter {17359A74-1236-5467}'
+        handle = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, regPath)
+        self.voicemeeterPath = path.dirname(
+            winreg.QueryValueEx(handle, 'UninstallString')[0]
+        )
+        self.lib = ctypes.CDLL(
+            path.join(self.voicemeeterPath, self.voicemeeterDll)
+        )
 
     def _isParametersDirty(self):
         return self.lib.VBVMR_IsParametersDirty()
 
-    def getParameterFloat(self, param: bytes, pValue: c_float):
+    def getParameterFloat(self, param: bytes, pValue: POINTER(c_float)):
         self.lib.VBVMR_GetParameterFloat(param, pValue)
 
-    def setParameterFloat(self, param: bytes, value: c_float):
+    def setParameterFloat(self, param: bytes, value: POINTER(c_float)):
         self.lib.VBVMR_SetParameterFloat(param, value)
 
     def login(self):
@@ -78,31 +81,31 @@ class VoicemeeterWrapper:
         if ret < 0:
             raise Exception('Error Loging in voicemeeter')
         else:
-            self.connected = True
+            self._connected = True
             comError = self._isParametersDirty()
             if comError >= 0:
-                self.getParameterFloat(
-                    self.channel + b'.Gain',
-                    self.ref_volume
-                )
-                print(self.volume)
+                self.getParameterFloat(self._gain, self._ref_volume)
+                print(self._volume)
             self.updater.start()
 
     def logout(self):
-        self._lock.acquire()
-        self._quit = True
-        self.connected = False
-        self.lib.VBVMR_Logout()
-        self._lock.release()
+        try:
+            self._lock.acquire()
+            self._quit = True
+            self._connected = False
+            self.lib.VBVMR_Logout()
+        finally:
+            if self._lock.locked():
+                self._lock.release()
 
     def volume_up(self, value: int):
         try:
             self._lock.acquire()
-            if self.connected:
-                if self.volume.value < 12:
-                    self.volume.value += value
-                print(self.volume)
-                self.setParameterFloat(self.channel + b'.Gain', self.volume)
+            if self._connected:
+                if self._volume.value < 12:
+                    self._volume.value += value
+                print(self._volume)
+                self.setParameterFloat(self._gain, self._volume)
                 self._self_update = True
         finally:
             if self._lock.locked():
@@ -111,11 +114,11 @@ class VoicemeeterWrapper:
     def volume_down(self, value: int):
         try:
             self._lock.acquire()
-            if self.connected:
-                if self.volume.value > -60:
-                    self.volume.value -= value
-                print(self.volume)
-                self.setParameterFloat(self.channel + b'.Gain', self.volume)
+            if self._connected:
+                if self._volume.value > -60:
+                    self._volume.value -= value
+                print(self._volume)
+                self.setParameterFloat(self._gain, self._volume)
                 self._self_update = True
         finally:
             if self._lock.locked():
@@ -123,7 +126,11 @@ class VoicemeeterWrapper:
 
     def set_channel(self, channel: Union['Bus', 'Strip']):
         self.channel = channel
-        self.getParameterFloat(self._gain, self.ref_volume)
+        self.getParameterFloat(self._gain, self._ref_volume)
+
+    @property
+    def _gain(self) -> bytes:
+        return self.channel.value + b'.Gain'
 
     class Strip(Enum):
         STRIP0 = b'Strip[0]'
