@@ -20,8 +20,7 @@ def volume_listener(volume_up: Callable[[int], None] = _none, volume_down: Calla
         try:
             match key:
                 case Key.media_volume_mute:
-                    listener.stop()
-                    icon.stop()
+                    stop()
                 case Key.media_volume_up:
                     volume_up(1)
                 case Key.media_volume_down:
@@ -51,9 +50,9 @@ def hide():
 
 
 def stop():
-    if 'icon' in globals():
+    if 'icon' in globals() and icon._running:
         icon.stop()
-    if 'listener' in globals():
+    if 'listener' in globals() and listener.running:
         listener.stop()
 
 
@@ -113,6 +112,6 @@ if __name__ == '__main__':
             hide()
             listener.join()
     finally:
-        stop()
         vm.logout()
+        stop()
         save_config({'channel': vm.channel.name})

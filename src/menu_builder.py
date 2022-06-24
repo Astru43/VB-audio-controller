@@ -24,8 +24,8 @@ def menu_builder(vm: VoicemeeterWrapper, stop: Callable[[None], None]):
             'Stop',
             stop,
             default=True,
-            visible=False
         ),
+        Menu.SEPARATOR,
         MenuItem(
             'Busses',
             Menu(lambda: (map_helper(bus) for bus in vm.Bus))
