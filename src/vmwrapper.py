@@ -98,31 +98,31 @@ class VoicemeeterWrapper:
             if self._lock.locked():
                 self._lock.release()
 
-    def volume_up(self, value: int):
+    def volume_up(self, value: int) -> float:
         try:
             self._lock.acquire()
             if self._connected:
                 if self._volume.value < 12:
                     self._volume.value += value
-                print(self._volume)
                 self.setParameterFloat(self._gain, self._volume)
                 self._self_update = True
         finally:
             if self._lock.locked():
                 self._lock.release()
+            return self._volume.value
 
-    def volume_down(self, value: int):
+    def volume_down(self, value: int) -> float:
         try:
             self._lock.acquire()
             if self._connected:
                 if self._volume.value > -60:
                     self._volume.value -= value
-                print(self._volume)
                 self.setParameterFloat(self._gain, self._volume)
                 self._self_update = True
         finally:
             if self._lock.locked():
                 self._lock.release()
+            return self._volume.value
 
     def set_channel(self, channel: Union['Bus', 'Strip']):
         self.channel = channel

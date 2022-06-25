@@ -49,6 +49,13 @@ def hide():
         win32gui.ShowWindow(wnd, win32con.SW_HIDE)
 
 
+def show():
+    wnd = win32gui.GetForegroundWindow()
+    cmd: str = os.path.basename(sys.argv[0])
+    if cmd.endswith('.exe') and not cmd.startswith('debug_'):
+        win32gui.ShowWindow(wnd, win32con.SW_SHOW)
+
+
 def stop():
     if 'icon' in globals() and icon._running:
         icon.stop()
@@ -81,7 +88,7 @@ def load_channel(config):
 def load_config():
     try:
         config = None
-        path = Path('config.json')
+        path = Path(os.path.dirname(sys.argv[0]), 'config.json')
         if path.exists():
             with open(path) as file:
                 config = json.load(file)
@@ -91,7 +98,7 @@ def load_config():
 
 def save_config(config):
     try:
-        with open(Path('config.json'), 'w') as file:
+        with open(Path(os.path.dirname(sys.argv[0]), 'config.json'), 'w') as file:
             json.dump(config, file)
     except:
         os.remove(Path('config.json'))
@@ -112,6 +119,7 @@ if __name__ == '__main__':
             hide()
             listener.join()
     finally:
+        show()
         vm.logout()
         stop()
         save_config({'channel': vm.channel.name})
