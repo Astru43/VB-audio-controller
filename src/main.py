@@ -5,7 +5,7 @@ import sys
 from typing import Callable
 from pynput import keyboard
 from pynput.keyboard import Key
-from win32 import win32gui
+from win32 import win32gui, win32console
 from win32.lib import win32con
 from menu_builder import menu_builder
 from trayIcon import TrayIcon
@@ -43,16 +43,16 @@ def volume_listener(volume_up: Callable[[int], None] = _none, volume_down: Calla
 
 
 def hide():
-    wnd = win32gui.GetForegroundWindow()
+    wnd = win32console.GetConsoleWindow()
     cmd: str = os.path.basename(sys.argv[0])
     if cmd.endswith('.exe') and not cmd.startswith('debug_'):
         win32gui.ShowWindow(wnd, win32con.SW_HIDE)
 
 
 def show():
-    wnd = win32gui.GetForegroundWindow()
+    wnd = win32console.GetConsoleWindow()
     cmd: str = os.path.basename(sys.argv[0])
-    if cmd.endswith('.exe') and not cmd.startswith('debug_'):
+    if cmd.endswith('.exe'):
         win32gui.ShowWindow(wnd, win32con.SW_SHOW)
 
 
