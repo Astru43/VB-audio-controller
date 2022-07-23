@@ -105,6 +105,7 @@ def save_config(config):
 
 
 if __name__ == '__main__':
+    _error = False
     try:
         config = load_config()
         channel = load_channel(config)
@@ -118,8 +119,11 @@ if __name__ == '__main__':
             icon.run_detached()
             hide()
             listener.join()
-    finally:
+    except:
         show()
+        _error = True
+    finally:
         vm.logout()
         stop()
         save_config({'channel': vm.channel.name})
+        if _error: input("Press enter to close...")
