@@ -124,6 +124,15 @@ class VoicemeeterWrapper:
                 self._lock.release()
             return self._volume.value
 
+    def restart_engine(self):
+        try:
+            self._lock.acquire()
+            if self._connected:
+                self.setParameterFloat(b'Command.Restart', 1)
+        finally:
+            if self._lock.locked():
+                self._lock.release()
+
     def set_channel(self, channel: Union['Bus', 'Strip']):
         self.channel = channel
         self.getParameterFloat(self._gain, self._ref_volume)
