@@ -13,7 +13,10 @@ from vmwrapper import VoicemeeterWrapper
 def _none(*args): pass
 
 
-def volume_listener(volume_up: Callable[[int], None] = _none, volume_down: Callable[[int], None] = _none) -> keyboard.Listener:
+def volume_listener(volume_up: Callable[[int], None] = _none,
+                    volume_down: Callable[[int], None] = _none,
+                    restart_engine: Callable[[], None] = _none,
+                    ) -> keyboard.Listener:
     def on_press(key):
         try:
             match key:
@@ -24,6 +27,8 @@ def volume_listener(volume_up: Callable[[int], None] = _none, volume_down: Calla
                     volume_up(1)
                 case Key.media_volume_down:
                     volume_down(1)
+                case Key.f24:
+                    restart_engine()
         except AttributeError:
             print('Error {0}'.format(key))
 
@@ -67,7 +72,7 @@ if __name__ == '__main__':
         icon = TrayIcon("VMR", stop=stop, icon=res_path('res/icon_vb_mod.png'))
 
         vm.login()
-        with volume_listener(vm.volume_up, vm.volume_down) as listener:
+        with volume_listener(vm.volume_up, vm.volume_down, vm.restart_engine) as listener:
             icon.run_detached()
             hide()
             listener.join()

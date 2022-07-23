@@ -120,6 +120,15 @@ class VoicemeeterWrapper:
         finally:
             if self._lock.locked():
                 self._lock.release()
+                
+    def restart_engine(self):
+        try:
+            self._lock.acquire()
+            if (self.connected):
+                self.setParameterFloat(b'Command.Restart', 1)
+        finally:
+            if self._lock.locked():
+                self._lock.release()
 
     class Strip(Enum):
         STRIP0 = b'Strip[0]'
