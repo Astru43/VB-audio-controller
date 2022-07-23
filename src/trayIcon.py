@@ -3,15 +3,8 @@ from PIL import Image, ImageDraw
 
 
 class TrayIcon(Icon):
-    def __init__(self, name, icon=None, title=None, **kwargs):
+    def __init__(self, name, icon=None, title=None, menu=None, **kwargs):
         icon = self._create_image(64, 64, 'black', 'white', icon)
-        menu = Menu(
-            MenuItem(
-                'Stop',
-                action=lambda: kwargs['stop'](),
-                default=True
-            )
-        )
         super().__init__(name, icon, title, menu, **kwargs)
 
     def _create_image(self, width, height, color1, color2, icon):
@@ -22,9 +15,11 @@ class TrayIcon(Icon):
             dc = ImageDraw.Draw(image)
             dc.rectangle(
                 (width // 2, 0, width, height // 2),
-                fill=color2)
+                fill=color2
+            )
             dc.rectangle(
                 (0, height // 2, width // 2, height),
-                fill=color2)
+                fill=color2
+            )
 
         return image
